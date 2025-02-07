@@ -347,8 +347,54 @@ def generate_successors(population):
     results = []
     # STUDENT Design and implement this
     # Hint: Call generate_children() on some individuals and fill up results.
+
+    number_to_select = int(len(population)/2); 
+
+    elitist = elitist_selection(population, number_to_select)
+    roulette = roulette_selection(population, number_to_select)
+
+    #generate children with the first result from elitist and roulette
+    elitist[0].generate_children(roulette[0])
+
+    while len(results) < len(population):
+        parent1 = random.choice(elitist)
+        parent2 = random.choice(roulette)
+
+        #skip if either parent is empty
+        if parent1.genome == [] or parent2.genome == []:
+            continue
+
+        children = parent1.generate_children(parent2)
+        results += children
+
     return results
 
+
+def elitist_selection(population, number_to_select):
+    #selection method 1: elitist selection
+    #Returns the top performing members of the population
+    sorted_population = sorted(population, key=Individual.fitness, reverse=True)
+
+    return sorted_population[:number_to_select]
+
+def roulette_selection(population, number_to_select):
+    #selection method 2: roulette selection
+    #Returns a random selection of the population, assigning a weight to each individual based on their fitness
+    fitness_arr = []
+    probabilities = []
+    total_fitness = 0
+
+    for member in population:
+        fitness = member.fitness()
+        fitness_arr.append(fitness)
+        total_fitness += fitness
+
+    for fitness in fitness_arr:
+        probabilities.append(fitness / total_fitness)
+
+    selected_members = random.choices(population, probabilities, k=number_to_select)
+
+    return selected_members
 
 def ga():
     # STUDENT Feel free to play with this parameter
