@@ -86,7 +86,11 @@ class Individual_Grid(object):
             for x in range(left, right):
                 # STUDENT Which one should you take?  Self, or other?  Why?
                 # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
-                pass
+                if y > 0:
+                    if (new_genome[y][x] == 'T' or new_genome[y][x] == '|') and new_genome[y-1][x] == "-":
+                        new_genome[y][x] = other.genome[y][x]
+                    else:
+                        new_genome[y][x] = random.choice([self.genome[y][x], other.genome[y][x]])
         # do mutation; note we're returning a one-element tuple here
         return (Individual_Grid(new_genome),)
 
