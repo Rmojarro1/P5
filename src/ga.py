@@ -67,12 +67,12 @@ class Individual_Grid(object):
         # STUDENT implement a mutation operator, also consider not mutating this individual
         # STUDENT also consider weighting the different tile types so it's not uniformly random
         # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
-
         left = 1
         right = width - 1
         for y in range(height):
             for x in range(left, right):
-                pass
+                if (genome[y][x] == 'T' or genome[y][x] == '|') and genome[y-1][x] == "-":
+                        genome[y][x] = "-"
         return genome
 
     # Create zero or more children from self and other
@@ -87,11 +87,8 @@ class Individual_Grid(object):
                 # STUDENT Which one should you take?  Self, or other?  Why?
                 # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
                 if y > 0:
-                    if (new_genome[y][x] == 'T' or new_genome[y][x] == '|') and new_genome[y-1][x] == "-":
-                        new_genome[y][x] = other.genome[y][x]
-                    else:
-                        new_genome[y][x] = random.choice([self.genome[y][x], other.genome[y][x]])
-        # do mutation; note we're returning a one-element tuple here
+                    new_genome[y][x] = random.choice([self.genome[y][x], other.genome[y][x]])
+        self.mutate(new_genome)
         return (Individual_Grid(new_genome),)
 
     # Turn the genome into a level string (easy for this genome)
