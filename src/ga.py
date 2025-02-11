@@ -170,6 +170,18 @@ class Individual_DE(object):
         # STUDENT For example, too many stairs are unaesthetic.  Let's penalize that
         if len(list(filter(lambda de: de[1] == "6_stairs", self.genome))) > 5:
             penalties -= 2
+
+        #add more enemies to a level
+        enemy_count = len(list(filter(lambda de: de[1] == "2_enemy", self.genome)))
+        if(enemy_count < 5):
+            penalties += .5 * enemy_count
+        
+        #avoid pipes that are too high for the player to jump over
+        max_pipe_height = 4
+        tall_pipe_count = len(list(filter(lambda de: de[1] == "7_pipe" and de[2] > max_pipe_height, self.genome)))
+        if tall_pipe_count > 0:
+            penalties -= 10; 
+
         # STUDENT If you go for the FI-2POP extra credit, you can put constraint calculation in here too and cache it in a new entry in __slots__.
         self._fitness = sum(map(lambda m: coefficients[m] * measurements[m],
                                 coefficients)) + penalties
