@@ -73,6 +73,7 @@ class Individual_Grid(object):
             for x in range(left, right):
                 if (genome[y][x] == 'T' or genome[y][x] == '|') and genome[y-1][x] == "-":
                         genome[y][x] = "-"
+                        print("replacing floating pipe")
         return genome
 
     # Create zero or more children from self and other
@@ -353,7 +354,7 @@ class Individual_DE(object):
         return Individual_DE(g)
 
 
-Individual = Individual_Grid
+Individual = Individual_DE
 
 
 def generate_successors(population):
