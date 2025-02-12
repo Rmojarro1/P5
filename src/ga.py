@@ -75,7 +75,7 @@ class Individual_Grid(object):
             for x in range(left, right):
                 if (genome[y][x] == 'T' or genome[y][x] == '|') and genome[y-1][x] == "-":
                         genome[y][x] = "-"
-                        print("replacing floating pipe")
+                        #print("replacing floating pipe")
         return genome
 
     # Create zero or more children from self and other
@@ -164,15 +164,15 @@ class Individual_DE(object):
         coefficients = dict(
             meaningfulJumpVariance=0.5,
             negativeSpace=0.6,
-            pathPercentage=0.5,
-            emptyPercentage=0.6,
+            pathPercentage=1.0, #0.5
+            emptyPercentage=-0.6, #0.6
             linearity=-0.5,
             solvability=2.0
         )
         penalties = 0
         # STUDENT For example, too many stairs are unaesthetic.  Let's penalize that
-        if len(list(filter(lambda de: de[1] == "6_stairs", self.genome))) > 5:
-            penalties -= 2
+        stair_count = len(list(filter(lambda de: de[1] == "6_stairs", self.genome)))
+        penalties -= max(0, (stair_count - 5) * 0.5) 
 
         #add more enemies to a level
         enemy_count = len(list(filter(lambda de: de[1] == "2_enemy", self.genome)))
@@ -182,8 +182,7 @@ class Individual_DE(object):
         #avoid pipes that are too high for the player to jump over
         max_pipe_height = 4
         tall_pipe_count = len(list(filter(lambda de: de[1] == "7_pipe" and de[2] > max_pipe_height, self.genome)))
-        if tall_pipe_count > 0:
-            penalties -= 10; 
+        penalties -= tall_pipe_count * 5  
 
         # STUDENT If you go for the FI-2POP extra credit, you can put constraint calculation in here too and cache it in a new entry in __slots__.
         self._fitness = sum(map(lambda m: coefficients[m] * measurements[m],
@@ -198,93 +197,61 @@ class Individual_DE(object):
     def mutate(self, new_genome):
         # STUDENT How does this work?  Explain it in your writeup.
         # STUDENT consider putting more constraints on this, to prevent generating weird things
-        if random.random() < 0.1 and len(new_genome) > 0:
+        if random.random() < 0.3:  # 30% mutation chance
             to_change = random.randint(0, len(new_genome) - 1)
             de = new_genome[to_change]
             new_de = de
+            
             x = de[0]
             de_type = de[1]
             choice = random.random()
+            
             if de_type == "4_block":
                 y = de[2]
                 breakable = de[3]
-                if choice < 0.33:
-                    x = offset_by_upto(x, width / 8, min=1, max=width - 2)
-                elif choice < 0.66:
-                    y = offset_by_upto(y, height / 2, min=0, max=height - 1)
-                else:
-                    breakable = not de[3]
-                new_de = (x, de_type, y, breakable)
-            elif de_type == "5_qblock":
-                y = de[2]
-                has_powerup = de[3]  # boolean
-                if choice < 0.33:
-                    x = offset_by_upto(x, width / 8, min=1, max=width - 2)
-                elif choice < 0.66:
-                    y = offset_by_upto(y, height / 2, min=0, max=height - 1)
-                else:
-                    has_powerup = not de[3]
-                new_de = (x, de_type, y, has_powerup)
-            elif de_type == "3_coin":
-                y = de[2]
                 if choice < 0.5:
-                    x = offset_by_upto(x, width / 8, min=1, max=width - 2)
+                    x = x + random.choice([-1, 1])
                 else:
-                    y = offset_by_upto(y, height / 2, min=0, max=height - 1)
-                new_de = (x, de_type, y)
+                    breakable = not breakable
+                new_de = (x, de_type, y, breakable)
+                
+            elif de_type == "2_enemy":
+                if choice < 0.5:
+                    x = x + random.choice([-1, 1])
+                new_de = (x, de_type)
+                
             elif de_type == "7_pipe":
                 h = de[2]
                 if choice < 0.5:
-                    x = offset_by_upto(x, width / 8, min=1, max=width - 2)
+                    x = x + random.choice([-1, 1])
                 else:
-                    h = offset_by_upto(h, 2, min=2, max=height - 4)
+                    h = max(2, min(h + random.choice([-1, 1]), 4))  # Keep height in a good range
                 new_de = (x, de_type, h)
-            elif de_type == "0_hole":
-                w = de[2]
-                if choice < 0.5:
-                    x = offset_by_upto(x, width / 8, min=1, max=width - 2)
-                else:
-                    w = offset_by_upto(w, 4, min=1, max=width - 2)
-                new_de = (x, de_type, w)
-            elif de_type == "6_stairs":
-                h = de[2]
-                dx = de[3]  # -1 or 1
-                if choice < 0.33:
-                    x = offset_by_upto(x, width / 8, min=1, max=width - 2)
-                elif choice < 0.66:
-                    h = offset_by_upto(h, 8, min=1, max=height - 4)
-                else:
-                    dx = -dx
-                new_de = (x, de_type, h, dx)
-            elif de_type == "1_platform":
-                w = de[2]
-                y = de[3]
-                madeof = de[4]  # from "?", "X", "B"
-                if choice < 0.25:
-                    x = offset_by_upto(x, width / 8, min=1, max=width - 2)
-                elif choice < 0.5:
-                    w = offset_by_upto(w, 8, min=1, max=width - 2)
-                elif choice < 0.75:
-                    y = offset_by_upto(y, height, min=0, max=height - 1)
-                else:
-                    madeof = random.choice(["?", "X", "B"])
-                new_de = (x, de_type, w, y, madeof)
-            elif de_type == "2_enemy":
-                pass
-            new_genome.pop(to_change)
-            heapq.heappush(new_genome, new_de)
+            
+            new_genome[to_change] = new_de
         return new_genome
 
     def generate_children(self, other):
         # STUDENT How does this work?  Explain it in your writeup.
-        pa = random.randint(0, len(self.genome) - 1)
-        pb = random.randint(0, len(other.genome) - 1)
+        if not self.genome or not other.genome:
+            return Individual_DE([]), Individual_DE([])
+
+
+        pa = random.randint(0, len(self.genome) - 1) if len(self.genome) > 1 else 0
+        pb = random.randint(0, len(other.genome) - 1) if len(other.genome) > 1 else 0
+
         a_part = self.genome[:pa] if len(self.genome) > 0 else []
         b_part = other.genome[pb:] if len(other.genome) > 0 else []
         ga = a_part + b_part
         b_part = other.genome[:pb] if len(other.genome) > 0 else []
         a_part = self.genome[pa:] if len(self.genome) > 0 else []
         gb = b_part + a_part
+
+        if not ga:
+            ga = self.genome[:]
+        if not gb:
+            gb = other.genome[:]
+
         # do mutation
         return Individual_DE(self.mutate(ga)), Individual_DE(self.mutate(gb))
 
@@ -369,8 +336,15 @@ def generate_successors(population):
     elitist = elitist_selection(population, number_to_select)
     roulette = roulette_selection(population, number_to_select)
 
+    valid_elitist = [ind for ind in elitist if ind.genome]
+    valid_roulette = [ind for ind in roulette if ind.genome]
+
+    if not valid_elitist or not valid_roulette:
+        return population
+
     #generate children with the first result from elitist and roulette
-    elitist[0].generate_children(roulette[0])
+    #elitist[0].generate_children(roulette[0])
+    results.extend(elitist[0].generate_children(roulette[0]))
 
     while len(results) < len(population):
         parent1 = random.choice(elitist)
@@ -381,7 +355,11 @@ def generate_successors(population):
             continue
 
         children = parent1.generate_children(parent2)
-        results += children
+        #results += children
+        if children:
+            results.extend(children)
+
+    #print("Genome sizes of new generation:", [len(ind.genome) for ind in results])
 
     return results
 
@@ -389,95 +367,103 @@ def generate_successors(population):
 def elitist_selection(population, number_to_select):
     #selection method 1: elitist selection
     #Returns the top performing members of the population
-    sorted_population = sorted(population, key=Individual.fitness, reverse=True)
-
+    sorted_population = sorted(population, key=lambda ind: (ind.fitness(), len(ind.genome)), reverse=True)
     return sorted_population[:number_to_select]
 
 def roulette_selection(population, number_to_select):
     #selection method 2: roulette selection
     #Returns a random selection of the population, assigning a weight to each individual based on their fitness
-    fitness_arr = []
-    probabilities = []
-    total_fitness = 0
-
-    for member in population:
-        fitness = member.fitness()
-        fitness_arr.append(fitness)
-        total_fitness += fitness
-
-    for fitness in fitness_arr:
-        probabilities.append(fitness / total_fitness)
-
-    selected_members = random.choices(population, probabilities, k=number_to_select)
-
-    return selected_members
+    # Ensure no division by zero by adding a small value if fitness is zero
+    fitness_arr = [max(0.01, ind.fitness() + len(ind.genome)) for ind in population]  # Ensure fitness is always >0
+    total_fitness = sum(fitness_arr)
+    probabilities = [f / total_fitness for f in fitness_arr]
+    return random.choices(population, probabilities, k=number_to_select)
 
 def ga():
-    # STUDENT Feel free to play with this parameter
-    pop_limit = 480
-    # Code to parallelize some computations
+    pop_limit = 480  # Population size
     batches = os.cpu_count()
-    if pop_limit % batches != 0:
-        print("It's ideal if pop_limit divides evenly into " + str(batches) + " batches.")
-    batch_size = int(math.ceil(pop_limit / batches))
+    batch_size = max(1, pop_limit // (2 * batches))  # Reduce batch size for faster feedback
+
+    max_generations = 1000
+    stagnation_limit = 50  # Stop if best fitness hasn't improved for 10 gens
+    best_fitnesses = []
+
     with mpool.Pool(processes=os.cpu_count()) as pool:
         init_time = time.time()
-        # STUDENT (Optional) change population initialization
+        
+        # Generate initial population (90% random, 10% empty)
         population = [Individual.random_individual() if random.random() < 0.9
                       else Individual.empty_individual()
-                      for _g in range(pop_limit)]
-        # But leave this line alone; we have to reassign to population because we get a new population that has more cached stuff in it.
-        population = pool.map(Individual.calculate_fitness,
-                              population,
-                              batch_size)
+                      for _ in range(pop_limit)]
+        
+        # Calculate fitness in parallel
+        population = pool.map(Individual.calculate_fitness, population, batch_size)
+        
         init_done = time.time()
-        print("Created and calculated initial population statistics in:", init_done - init_time, "seconds")
+        print(f"Created and calculated initial population in: {init_done - init_time:.2f} seconds")
+        
         generation = 0
         start = time.time()
-        now = start
-        print("Use ctrl-c to terminate this loop manually.")
+
         try:
             while True:
                 now = time.time()
-                # Print out statistics
-                if generation > 0:
-                    best = max(population, key=Individual.fitness)
-                    print("Generation:", str(generation))
-                    print("Max fitness:", str(best.fitness()))
-                    print("Average generation time:", (now - start) / generation)
-                    print("Net time:", now - start)
-                    with open("levels/last.txt", 'w') as f:
-                        for row in best.to_level():
-                            f.write("".join(row) + "\n")
-                generation += 1
-                # STUDENT Determine stopping condition
-                stop_condition = False
-                if stop_condition:
+                
+                # Print statistics
+                fitness_scores = [ind.fitness() for ind in population]
+                max_fitness = max(fitness_scores)
+                avg_fitness = sum(fitness_scores) / len(fitness_scores)
+
+                print(f"\nGeneration {generation}")
+                print(f"  Max Fitness: {max_fitness}")
+                print(f"  Avg Fitness: {avg_fitness:.2f}")
+                print(f"  Generation Time: {(now - start) / (generation + 1):.2f} sec")
+                print(f"  Net Run Time: {now - start:.2f} sec")
+
+                # Save the best level
+                best = max(population, key=Individual.fitness)
+                with open("levels/last.txt", 'w') as f:
+                    for row in best.to_level():
+                        f.write("".join(row) + "\n")
+                
+                # Check stopping conditions
+                best_fitnesses.append(max_fitness)
+                if generation >= max_generations:
+                    print("Stopping: Max generations reached.")
                     break
-                # STUDENT Also consider using FI-2POP as in the Sorenson & Pasquier paper
+
+                if len(best_fitnesses) >= stagnation_limit and max(best_fitnesses[-stagnation_limit:]) == best_fitnesses[-1]:
+                    print("Stopping: No improvement in last", stagnation_limit, "generations.")
+                    break
+                
+                # Generate next generation
                 gentime = time.time()
                 next_population = generate_successors(population)
                 gendone = time.time()
-                print("Generated successors in:", gendone - gentime, "seconds")
-                # Calculate fitness in batches in parallel
-                next_population = pool.map(Individual.calculate_fitness,
-                                           next_population,
-                                           batch_size)
+                print(f"  Generated successors in: {gendone - gentime:.2f} sec")
+
+                # Recalculate fitness in parallel
+                next_population = pool.map(Individual.calculate_fitness, next_population, batch_size)
                 popdone = time.time()
-                print("Calculated fitnesses in:", popdone - gendone, "seconds")
+                print(f"  Recalculated fitness in: {popdone - gendone:.2f} sec")
+
                 population = next_population
+                generation += 1
+
         except KeyboardInterrupt:
-            pass
+            print("\nProcess manually terminated.")
+
     return population
 
 
 if __name__ == "__main__":
     final_gen = sorted(ga(), key=Individual.fitness, reverse=True)
     best = final_gen[0]
-    print("Best fitness: " + str(best.fitness()))
+    print(f"Best Fitness: {best.fitness()}")
+
     now = time.strftime("%m_%d_%H_%M_%S")
-    # STUDENT You can change this if you want to blast out the whole generation, or ten random samples, or...
-    for k in range(0, 10):
-        with open("levels/" + now + "_" + str(k) + ".txt", 'w') as f:
+    for k in range(10):
+        with open(f"levels/{now}_{k}.txt", 'w') as f:
             for row in final_gen[k].to_level():
                 f.write("".join(row) + "\n")
+
