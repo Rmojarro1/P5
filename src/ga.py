@@ -73,29 +73,9 @@ class Individual_Grid(object):
         mutation_rate = 0.2
         for y in range(height - 1):
             for x in range(left, right):
-                if random.random() < mutation_rate:
-                    curr_tile = genome[y][x] 
-                    mutated_tile = random.choices(options, weights=[95, 5, 1, 1, 5, 3, 0, 0, 5])[0]
-                    if curr_tile == "T" or curr_tile == "|":
-                        continue
-
-                    if mutated_tile == "E":
-                        if genome[y+1][x] == "-":
-                            mutated_tile = "-"
-                    if mutated_tile == "X":
-                        if y < height - 3:
-                            mutated_tile = "B"
-                    if mutated_tile == "M" or mutated_tile == "?":
-                        ground_level = None
-                        for i in range(y + 1, height):
-                            if genome[i][x] != "-":
-                                ground_level = i
-                                break
-                        if ground_level is not None or not (ground_level - 5 <= y <= ground_level - 2):
-                            mutated_tile = "-"
-                    
-
-                    genome[y][x] = mutated_tile
+                if (genome[y][x] == 'T' or genome[y][x] == '|') and genome[y-1][x] == "-":
+                        genome[y][x] = "-"
+                        print("replacing floating pipe")
         return genome
 
     # Create zero or more children from self and other
@@ -109,20 +89,9 @@ class Individual_Grid(object):
             for x in range(left, right):
                 # STUDENT Which one should you take?  Self, or other?  Why?
                 # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
-                if self.genome[y][x] == "T" or self.genome[y][x] == "|" or other.genome[y][x] == "T" or other.genome[y][x] == "|":
-                    continue
-                better_parent, other_parent = (self, other) if self.fitness() > other.fitness() else (other, self)
-                if random.random() < 0.8:
-                    new_tile = better_parent.genome[y][x]
-                else:
-                    new_tile = other_parent.genome[y][x]
-
-                new_genome[y][x] = new_tile
-
-                #if y > 0:
-                 #   new_genome[y][x] = random.choice([self.genome[y][x], other.genome[y][x]])
-        #self.mutate(new_genome)
-        new_genome = self.mutate(new_genome)
+                if y > 0:
+                    new_genome[y][x] = random.choice([self.genome[y][x], other.genome[y][x]])
+        self.mutate(new_genome)
         return (Individual_Grid(new_genome),)
 
     # Turn the genome into a level string (easy for this genome)
@@ -147,31 +116,12 @@ class Individual_Grid(object):
     def random_individual(cls):
         # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
         # STUDENT also consider weighting the different tile types so it's not uniformly random
-        g = [["-" for col in range(width)] for row in range(height)]
+        g = [random.choices(options, k=width) for row in range(height)]
         g[15][:] = ["X"] * width
         g[14][0] = "m"
-
         g[7][-1] = "v"
-        g[14][-1] = "X"
-        for col in range (8, 14):
-            g[col][-1] = "f"
-
-        pipe_count = random.randint(0, 35)
-        valid_x = set(range(5, width - 6))
-
-        while pipe_count != 0:
-            x = random.randint(5, width - 6)
-            y = random.randint(11, 14)
-
-            if not {x, x +1, x -1}.issubset(valid_x):
-                continue
-
-            g[y][x] = "T"
-            for block in range(y + 1, 15):
-                g[block][x] = "|"
-            pipe_count -= 1
-            valid_x -= {x, x + 1, x - 1}
-
+        g[8:14][-1] = ["f"] * 6
+        g[14:16][-1] = ["X", "X"]
         return cls(g)
 
 
@@ -406,7 +356,7 @@ class Individual_DE(object):
         return Individual_DE(g)
 
 
-Individual = Individual_Grid  # or Individual_DE
+Individual = Individual_DE  # or Individual_DE
 
 
 def generate_successors(population):
