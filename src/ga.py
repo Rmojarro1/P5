@@ -47,9 +47,9 @@ class Individual_Grid(object):
         coefficients = dict(
             meaningfulJumpVariance=0.5,
             negativeSpace=0.6,
-            pathPercentage=0.5,
-            emptyPercentage=0.6,
-            linearity=-0.5,
+            pathPercentage=1.0, #0.5
+            emptyPercentage=-0.6, #0.6
+            linearity=1.0, #-0.5
             solvability=2.0
         )
         self._fitness = sum(map(lambda m: coefficients[m] * measurements[m],
@@ -70,12 +70,11 @@ class Individual_Grid(object):
         left = 1
         right = width - 1
 
-        mutation_rate = 0.2
-        for y in range(height - 1):
-            for x in range(left, right):
-                if (genome[y][x] == 'T' or genome[y][x] == '|') and genome[y-1][x] == "-":
-                        genome[y][x] = "-"
-                        #print("replacing floating pipe")
+        if random.random() < 0.5:
+            for y in range(height - 1):
+                for x in range(left, right):
+                    if (genome[y][x] == 'T' or genome[y][x] == '|') and genome[y-1][x] == "-":
+                            genome[y][x] = "-"
         return genome
 
     # Create zero or more children from self and other
@@ -323,7 +322,7 @@ class Individual_DE(object):
         return Individual_DE(g)
 
 
-Individual = Individual_DE  # or Individual_DE
+Individual = Individual_Grid  # or Individual_DE
 
 
 def generate_successors(population):
